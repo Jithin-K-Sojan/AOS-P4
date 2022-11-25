@@ -26,23 +26,21 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
 
      long int map_kbs = mr_spec.map_kilobytes;
 
+     std::cout<<map_kbs<<std::endl;
+
+     long int currShardSize = 0;
+
      for (auto inputFile: mr_spec.input_files){
 
-          // if (currShardSize==0){
-          //      struct FileShard newFileShard;
-          //      fileShards.push_back(newFileShard);
-          // }
-
-          std::ifstream inputFileStream(inputFile);
-
-          inputFileStream.seekg(0,std::ifstream::end);
+          std::ifstream inputFileStream(inputFile, std::ios::in);
+          
+          inputFileStream.seekg(0,std::ios::end);
           long int inputFileSize = inputFileStream.tellg();
 
-          // std::cout<<inputFile<<" size: "<<inputFileSize<<std::endl;
+          std::cout<<inputFile<<" size: "<<inputFileSize<<std::endl;
 
           inputFileStream.seekg(0);
 
-          long int currShardSize = 0;
           long int pos = 0;
           
           while (pos<inputFileSize){
@@ -54,40 +52,51 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
 
 
                struct MiniShard newMiniShard;
-               if ((inputFileSize-pos)>(map_kbs*1024)){
-                    inputFileStream.seekg((map_kbs*1024),std::ifstream::cur);
+               
+               long int shardSpace = (map_kbs * 1024) - currShardSize;
+
+               if ((inputFileSize-pos)>shardSpace){
+                    inputFileStream.seekg(shardSpace,std::ios::cur);
                     std::string temp;
-                    // Should we peek and check if it is at '\n'? Or does getline return empty in that case?
 
                     if (getline(inputFileStream, temp)){
 
                          newMiniShard.fileName = inputFile;
                          newMiniShard.start = pos;
-                         newMiniShard.end = inputFileStream.tellg();
+
+                         if (inputFileStream.tellg()==-1){
+                              newMiniShard.end = inputFileSize;
+                         }
+                         else{
+                              
+                              newMiniShard.end = inputFileStream.tellg();
+                         }
 
                     }
                     else{
-                         ; // This case is probably not possible.
-
-
+                         // Remove this, will not reach.
+                         ; 
+                         
                     }
                }
                else{
-                    // The file has to end on a '\n' right?
+                    // The file does not end on a "\n"
+                    inputFileStream.seekg(0,std::ios::end);
                     newMiniShard.fileName = inputFile;
                     newMiniShard.start = pos;
                     newMiniShard.end = inputFileSize;
                }
 
 
-               std::cout<<inputFileStream.tellg()<<std::endl;
+               // std::cout<<inputFileStream.tellg()<<std::endl;
 
-               pos = inputFileStream.tellg();
+               pos = newMiniShard.end;
+               pos+=1;
 
-               currShardSize += (newMiniShard.end - newMiniShard.start);
+               currShardSize += (newMiniShard.end - newMiniShard.start + 1);
                fileShards[fileShards.size()-1].miniShards.push_back(newMiniShard);
 
-               if (currShardSize>(map_kbs*1024)){
+               if (currShardSize>=(map_kbs*1024)){
                     currShardSize = 0;
                }
 
@@ -103,6 +112,25 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                std::cout<<j.fileName<<" "<<j.start<<" "<<j.end<<std::endl;
           }
      }
+
+     // long int end = fileShards[1].miniShards[0].end;
+     // std::cout<<end<<std::endl;
+     // std::cout<<fileShards[1].miniShards[0].fileName<<std::endl;
+
+     // std::ifstream inputFileStream(fileShards[1].miniShards[0].fileName, std::ios::in);
+     // std::string temp;
+     // while (inputFileStream.tellg()!=end){
+
+     //      // Can just do while (getline()) at the worker.
+     //      if (getline(inputFileStream, temp)){
+     //           std::cout<<temp;
+     //           if (inputFileStream.tellg()==-1){
+     //                std::cout<<"EOF "<<end<<std::endl;
+     //                break;
+     //           }
+     //      }
+          
+     // }
 
 	return true;
 }
