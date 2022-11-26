@@ -1,3 +1,38 @@
 syntax = "proto3";
 
 package masterworker;
+
+service Worker {
+    rpc runJob(JobSpec) returns (JobResult) {};
+}
+
+message JobSpec {
+    // Master-defined unique job id for a particular mapper/reducer task.
+    string job_id = 1;
+    // To access the user-defined map/reduce function.
+    string user_id = 2;
+    // 0 if it is a map job, 1 if it is a reduce job.
+    bool map_reduce = 3;
+    // To indicate to the mapper the number of partitions to split the results into (R).
+    int32 num_partitions = 4;
+    // To send miniShards to the mapper and intermediate files to the reducer.
+    repeated FileArgs input_files = 5;
+    // User provided output directory for the reducers.
+    string output_dir = 6;
+}
+
+message JobResult {
+    // Indicating the success of the map/reduce task.
+    bool job_status = 1;
+    // Indicating the path of the output/intermediate files.
+    // Note that the intermediate file names/paths will be a combination of the pid of the worker instance, the unique id for the task provdided by the master, and the partition number (0 to (R-1)).
+    repeated FileArgs output_files = 2;
+
+}
+
+message FileArgs {
+    // Would be the path to either the input shard or the intermediate file.
+    string file_path = 1;
+    int64 start_offset = 2;
+    int64 end_offset = 3;
+}
