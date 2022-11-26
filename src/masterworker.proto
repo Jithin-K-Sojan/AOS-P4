@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package masterworker;
 
-service Worker {
-    rpc runJob(JobSpec) returns (JobResult) {};
+service MasterWorker {
+    rpc runJob(JobRequest) returns (JobReply) {};
 }
 
-message JobSpec {
+message JobRequest {
     // Master-defined unique job id for a particular mapper/reducer task.
     string job_id = 1;
     // To access the user-defined map/reduce function.
@@ -21,7 +21,7 @@ message JobSpec {
     string output_dir = 6;
 }
 
-message JobResult {
+message JobReply {
     // Indicating the success of the map/reduce task.
     bool job_status = 1;
     // Indicating the path of the output/intermediate files.
