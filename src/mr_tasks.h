@@ -68,6 +68,8 @@ struct BaseReducerInternal {
 		void emit(const std::string& key, const std::string& val);
 
 		/* NOW you can add below, data members and member functions as per the need of your implementation*/
+
+		std::vector<std::pair<std::string,std::string>> reduceResult;
 };
 
 
@@ -79,5 +81,7 @@ inline BaseReducerInternal::BaseReducerInternal() {
 
 /* CS6210_TASK Implement this function */
 inline void BaseReducerInternal::emit(const std::string& key, const std::string& val) {
-	std::cout << "Dummy emit by BaseReducerInternal: " << key << ", " << val << std::endl;
+	// std::cout << "Dummy emit by BaseReducerInternal: " << key << ", " << val << std::endl;
+
+	reduceResult.push_back(make_pair(key,val));
 }
