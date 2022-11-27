@@ -5,6 +5,9 @@
 
 // ADDED
 #include <fstream>
+#include <filesystem>
+#include <vector>
+#include <map>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -116,7 +119,8 @@ class Worker::CallData {
 
 		// Writing to intermediate files.
 		for (int i = 0; i<num_partitions; i++){
-			std::string interFilePath = intermediateName + "/" + std::to_string(i);
+			std::string interFilePath = intermediateName + "/" + std::to_string(i) + ".txt";
+			std::string interFileAbsPath = std::filesystem::current_path() / std::filesystem::path(interFilePath);
 
 			std::ofstream outputFileStream(interFilePath, std::ios::out);
 
@@ -126,6 +130,11 @@ class Worker::CallData {
 				outputFileStream << p.second <<std::endl;
 			}
 
+			FileArgs* newFileArgs = reply_.add_output_files();
+			newFileArgs->set_file_path(interFileAbsPath);
+			newFileArgs->set_start_offset(0);
+			newFileArgs->set_end_offset(outputFileStream.tellp());
+
 			outputFileStream.close();
 		}
 
@@ -133,6 +142,41 @@ class Worker::CallData {
 
 	void runReduceTask() {
 		auto reducer = get_reducer_from_task_factory(request_.user_id());
+
+		// std::vector<std::pair<std::string,std::string>> mapResult;
+		std::map<std::string,std::vector<std::string>> mapResult;
+
+		for (FileArgs fileArg_ : request_.input_files()) {
+			std::ifstream inputFileStream(fileArg_.file_path(), std::ios::in);
+			std::string keyString;
+			std::string valString;
+
+			while (getline(inputFileStream, keyString) && getline(inputFileStream, valString)){
+				mapResult[keyString].push_back(valString);
+			}
+
+			inputFileStream.close();
+		}
+
+		for (std::map<std::string,std::vector<std::string>>::iterator p = mapResult.begin(); p!=mapResult.end(); ++p){
+			reducer->reduce(p->first,p->second);
+		}
+
+		std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
+		std::string outputFilePath = request_.output_dir() + "/" + outputFileName;
+
+		std::ofstream outputFileStream(outputFilePath, std::ios::out);
+
+		for (std::pair<std::string,std::string> p : reducer->impl_i->reduceResult[i]){
+			outputFileStream << p.first << " " << p.second << std::endl;
+		}
+
+		FileArgs* newFileArgs = reply_.add_output_files();
+		newFileArgs->set_file_path(outputFilePath);
+		newFileArgs->set_start_offset(0);
+		newFileArgs->set_end_offset(outputFileStream.tellp());
+
+		outputFileStream.close();
 
 	}
 
@@ -164,6 +208,8 @@ class Worker::CallData {
 			else{
 				runMapTask();
 			}
+
+			reply_.set_job_status(true);
 
 			// And we are done! Let the gRPC runtime know we've finished, using the
 			// memory address of this instance as the uniquely identifying tag for

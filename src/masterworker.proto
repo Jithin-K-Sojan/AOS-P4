@@ -17,7 +17,7 @@ message JobRequest {
     int32 num_partitions = 4;
     // To send miniShards to the mapper and intermediate files to the reducer.
     repeated FileArgs input_files = 5;
-    // User provided output directory for the reducers.
+    // User provided output directory for the reducers (should this be the entire path?).
     string output_dir = 6;
 }
 
