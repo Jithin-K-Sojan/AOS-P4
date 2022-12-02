@@ -167,7 +167,7 @@ class Worker::CallData {
 
 		std::ofstream outputFileStream(outputFilePath, std::ios::out);
 
-		for (std::pair<std::string,std::string> p : reducer->impl_i->reduceResult[i]){
+		for (std::pair<std::string,std::string> p : reducer->impl_->reduceResult){
 			outputFileStream << p.first << " " << p.second << std::endl;
 		}
 
