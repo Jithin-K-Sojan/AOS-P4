@@ -17,10 +17,7 @@ struct MiniShard{
 /* CS6210_TASK: Create your own data structure here, where you can hold information about file splits,
      that your master would use for its own bookkeeping and to convey the tasks to the workers for mapping */
 struct FileShard {
-     std::vector<MiniShard> miniShards; 
-     enum State { NEEDS_MAP, NEEDS_REDUCE, DONE };
-     State state;
-     std::vector<MiniShard> output_files; 
+     std::vector<MiniShard> miniShards;
 };
 
 
