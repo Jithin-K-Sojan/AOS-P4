@@ -7,12 +7,10 @@
 #include "masterworker.grpc.pb.h"
 
 using grpc::ClientAsyncResponseReader;
-using grpc::ClientContext;
 using grpc::ServerAsyncResponseWriter;
 using grpc::ServerBuilder;
 using grpc::CompletionQueue;
 using grpc::ServerContext;
-using grpc::Status;
 
 /* CS6210_TASK: Handle all the bookkeeping that Master is supposed to do.
 	This is probably the biggest task for this project, will test your understanding of map reduce */
@@ -29,13 +27,15 @@ class Master {
 		/* NOW you can add below, data members and member functions as per the need of your implementation*/
     const MapReduceSpec _mr_spec;
 
+    // for tracking FileShard state in master
     struct FileShardData {
       const struct FileShard shard;
       bool done = false;
 
-      ClientContext ctx;
+      bool ctx_valid = false; // true if ctx should be cancelled on cancel
+      grpc::ClientContext ctx;
       masterworker::JobReply reply;
-      Status status;
+      grpc::Status status;
 
       FileShardData(const FileShard &s) : shard(s) {}
     };
@@ -44,12 +44,12 @@ class Master {
 
     // state machine for metadata for a single worker, must be malloc'd/new'd
     // passes own tag into grpc callback for casting later back to WorkerData*
-    // not reused for reduces
+    // re-instantiated for reduce after map completes
     class WorkerData {
       private:
         const MapReduceSpec& _mr_spec;
         std::vector<FileShardData>& _fs;
-        size_t *_fs_idx_ptr;
+        size_t &_fs_idx;
         const std::string _ip;
         const bool _map_reduce; // whether it's map or reduce
 
@@ -57,20 +57,20 @@ class Master {
         std::shared_ptr<grpc::Channel> _ch;
 
       public:
-        WorkerData(const MapReduceSpec& mr_spec, const std::vector<FileShardData>& fs, size_t *fs_idx_ptr, std::string ip, bool map_reduce, CompletionQueue &cq) :
-          _mr_spec(mr_spec), _fs(fs), _ip(ip), _fs_idx_ptr(fs_idx_ptr), _map_reduce(map_reduce), _cq(cq) { };
+        WorkerData(const MapReduceSpec& mr_spec, std::vector<FileShardData>& fs, size_t &fs_idx, std::string ip, bool map_reduce, CompletionQueue &cq) :
+          _mr_spec(mr_spec), _fs(fs), _ip(ip), _fs_idx(fs_idx), _map_reduce(map_reduce), _cq(cq) { };
 
         void begin() {
-          // get next one to schedule
-          // *_fs_idx_ptr is the next one, except if it's done already
+          // get next one to do
+          // _fs_idx is the next one, except if it's done already
           // it's okay to have all the workers working on the same last one, i think, at the way end
           // since they all can then just be cancelled when the first one completes
           {
-            size_t initial = *_fs_idx_ptr;
-            while (_fs[*_fs_idx_ptr].done) {
-              *_fs_idx_ptr = ((*_fs_idx_ptr)+1)%_fs.size();
-              if ((*_fs_idx_ptr) == initial) {
-                // should not loop all the way around, since then begin() should never have been called
+            size_t initial_idx = _fs_idx;
+            while (_fs[_fs_idx].done) {
+              _fs_idx = (_fs_idx+1)%_fs.size();
+              if (_fs_idx == initial_idx) {
+                // should not loop all the way around, since then begin() should never have been called (all done)
                 assert(false);
               }
             }
@@ -86,7 +86,7 @@ class Master {
           req.set_user_id(_mr_spec.user_id);
           req.set_map_reduce(_map_reduce);
           req.set_num_partitions(_mr_spec.n_output_files);
-          for (auto ms : _fs[*_fs_idx_ptr].shard.miniShards) {
+          for (auto ms : _fs[_fs_idx].shard.miniShards) {
             masterworker::FileArgs* fa = req.add_input_files();
             fa->set_file_path(ms.fileName);
             fa->set_start_offset(ms.start);
@@ -95,9 +95,13 @@ class Master {
           req.set_output_dir("output_dir");
 
           std::unique_ptr<ClientAsyncResponseReader<masterworker::JobReply>> rpc(
-            stub->AsyncrunJob(&_fs[*_fs_idx_ptr].ctx, req, _cq));
+            stub->AsyncrunJob(&_fs[_fs_idx].ctx, req, _cq));
 
-          rpc->Finish(&_fs[*_fs_idx_ptr].reply, &_fs[*_fs_idx_ptr].status, this);
+          rpc->Finish(&_fs[_fs_idx].reply, &_fs[_fs_idx].status, this);
+        }
+
+        void done() {
+          
         }
 
         void fail() {
@@ -128,7 +132,7 @@ bool Master::run() {
   // receive loop
   void* tag;
   bool ok;
-  while (!std::all_of(_fs.begin(), _fs.end(), [](auto &s){ return s.state == FileShardData::FileShardState::DONE; })) {
+  while (!std::all_of(_fs.begin(), _fs.end(), [](auto &s){ return s.done; })) {
     if (!(cq.Next(&tag, &ok))) {
       // queue shutting down
       return false;
