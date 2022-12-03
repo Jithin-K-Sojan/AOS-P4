@@ -223,7 +223,7 @@ bool Master::run() {
   }
 
   // make directory for output
-  assert(std::filesystem::create_directory(_mr_spec.output_dir.c_str()));
+  // assert(std::filesystem::create_directory(_mr_spec.output_dir.c_str()));
 
   // cancel all workers for reduce (all but one will be busy on the last one)
   for (auto w : map_workers) w->cancel();
