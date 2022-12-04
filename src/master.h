@@ -218,11 +218,8 @@ bool Master::run() {
   assert(!run_ran);
   run_ran = true;
 
-  // add copy empty file just in case
+  // create output dir if needed
   std::filesystem::create_directory(_mr_spec.output_dir.c_str());
-  {
-    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
-  }
 
   // single cq because master has single thread, we want to wait for it outside WorkerData
   CompletionQueue map_cq, reduce_cq;
@@ -234,6 +231,11 @@ bool Master::run() {
 
   void* tag;
   bool ok;
+
+  // test
+  {
+    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
+  }
 
   // process workers until map task done
   while (!std::all_of(_map_tasks.begin(), _map_tasks.end(), [](auto &s){ return s.done; })) {
