@@ -73,7 +73,9 @@ class Master {
         req.set_output_filename(output_filename);
 
         for (auto &x : map_tasks) {
-          assert(partition < x.reply->output_files_size());
+          if (!(partition < x.reply->output_files_size())) {
+            assert(0);
+          }
           auto& f = x.reply->output_files(partition);
 
           masterworker::FileArgs* fa = req.add_input_files();
@@ -274,21 +276,16 @@ bool Master::run() {
     if (!(reduce_cq.Next(&tag, &ok))) {
       // queue shutting down for some reason
       printf("queue shutdown?\n");
-  // test
-  {
-    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
-  }
-
       return false;
     }
     if (!ok) ((WorkerData<ReduceTask>*)tag)->fail();
     else ((WorkerData<ReduceTask>*)tag)->done();
   }
 
+  // B
+
   // cancel all workers to delete 
   for (auto w : reduce_workers) w->cancel();
-
-  // B
 
   // drain the queue just in case
   reduce_cq.Shutdown();
