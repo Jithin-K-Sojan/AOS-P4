@@ -37,11 +37,13 @@ class Master {
       const FileShard shard;
 
       bool done;
+      std::string fn;
       masterworker::JobReply *reply;
 
-      void fill_request(masterworker::JobRequest& req) {
+      void fill_request(masterworker::JobRequest& req, const std::string& output_filename) {
         req.set_map_reduce(0);
         req.set_job_id("map_" + std::to_string((size_t)this));
+        req.set_output_filename(output_filename);
 
         for (auto ms : shard.miniShards) {
           masterworker::FileArgs* fa = req.add_input_files();
@@ -62,11 +64,13 @@ class Master {
       std::string output_dir;
 
       bool done;
+      std::string fn;
       masterworker::JobReply *reply;
 
-      void fill_request(masterworker::JobRequest& req) {
+      void fill_request(masterworker::JobRequest& req, const std::string& output_filename) {
         req.set_map_reduce(1);
         req.set_job_id("reduce_" + std::to_string((size_t)this));
+        req.set_output_filename(output_filename);
 
         for (auto &x : map_tasks) {
           assert(partition < x.reply->output_files_size());
@@ -97,6 +101,9 @@ class Master {
         std::vector<Task>& _tasks;
         size_t& _tasks_idx;
         const std::string _ip;
+        const std::string _output_dir;
+        std::string _fn;
+        bool _cancelled = false;
 
         CompletionQueue &_cq;
         std::shared_ptr<grpc::Channel> _ch;
@@ -106,11 +113,10 @@ class Master {
         grpc::Status status;
 
       public:
-        WorkerData(const MapReduceSpec& mr_spec, std::vector<Task>& fsds, size_t &fsds_idx, std::string ip, CompletionQueue &cq) :
-          _mr_spec(mr_spec), _tasks(fsds), _tasks_idx(fsds_idx), _ip(ip), _cq(cq) { begin(); };
+        WorkerData(const MapReduceSpec& mr_spec, std::vector<Task>& fsds, size_t &fsds_idx, std::string ip, CompletionQueue &cq, const std::string& output_dir) :
+          _mr_spec(mr_spec), _tasks(fsds), _tasks_idx(fsds_idx), _ip(ip), _cq(cq), _output_dir(output_dir) { begin(); };
 
         void begin() {
-          // printf("%p begin\n", this);
           // determine which one to do
           // _tasks_idx is the next one, except if it's done already
           // it's okay to have all the workers working on the same last one, i think, at the way end
@@ -124,7 +130,10 @@ class Master {
                 return;
               }
             }
+            assert(!_cancelled);
             _task = &_tasks[_tasks_idx];
+            _fn = std::to_string(_tasks_idx) + "_" + std::to_string((size_t)this);
+            printf("%s %s %s\n", _fn.c_str(), __func__, typeid(Task).name());
             _tasks_idx = (_tasks_idx+1)%_tasks.size();
           }
 
@@ -136,7 +145,7 @@ class Master {
           masterworker::JobRequest req;
           req.set_user_id(_mr_spec.user_id);
           req.set_num_partitions(_mr_spec.n_output_files);
-          _task->fill_request(req);
+          _task->fill_request(req, _fn);
 
           // dynamically allocate reply
           reply = new masterworker::JobReply();
@@ -152,7 +161,7 @@ class Master {
         }
 
         void done() {
-          // printf("%p done\n", this);
+          printf("%s %s %s\n", _fn.c_str(), __func__, typeid(Task).name());
 
           // check task done or worker reported failure
           if (_task->done || reply->job_status() == 0) {
@@ -160,28 +169,35 @@ class Master {
             return;
           }
 
-          // dispose of ctx
+          // dispose of ctx and fn
           delete ctx;
           ctx = NULL;
 
           // set and pickup new task
           _task->reply = reply;
+          _task->fn = _fn;
           _task->done = true;
           begin();
         }
 
         void fail() {
-          // printf("%p fail\n", this);
+          printf("%s %s %s\n", _fn.c_str(), __func__, typeid(Task).name());
           delete reply;
           reply = NULL;
           delete ctx;
           ctx = NULL;
+          std::filesystem::remove(_output_dir + "/" + _fn);
           begin();
         }
 
         void cancel() {
-          // printf("%p cancel\n", this);
-          if (ctx) ctx->TryCancel();
+          assert(!_cancelled);
+          _cancelled = true;
+          printf("%s %s %s\n", _fn.c_str(), __func__, typeid(Task).name());
+          if (ctx) {
+            ctx->TryCancel();
+            std::filesystem::remove(_output_dir + "/" + _fn);
+          }
           // small memory leak here, but this is ok
         }
     };
@@ -206,7 +222,7 @@ bool Master::run() {
   // connect to all workers for map task
   std::vector<WorkerData<MapTask>*> map_workers;
   map_workers.reserve(_mr_spec.worker_ipaddr_ports.size());
-  for (std::string ip : _mr_spec.worker_ipaddr_ports) map_workers.push_back(new WorkerData<MapTask>(_mr_spec, _map_tasks, _tasks_idx, ip, map_cq));
+  for (std::string ip : _mr_spec.worker_ipaddr_ports) map_workers.push_back(new WorkerData<MapTask>(_mr_spec, _map_tasks, _tasks_idx, ip, map_cq, "unused"));
 
   void* tag;
   bool ok;
@@ -223,20 +239,28 @@ bool Master::run() {
   }
 
   // make directory for output
-  // assert(std::filesystem::create_directory(_mr_spec.output_dir.c_str()));
+  const std::string inter_reducer_output = "inter_reducer_output"; // dir name for intermediate master outputs
+  std::filesystem::create_directory(inter_reducer_output);
 
   // cancel all workers for reduce (all but one will be busy on the last one)
   for (auto w : map_workers) w->cancel();
 
+  // drain the queue just in case
+  map_cq.Shutdown();
+  while (map_cq.Next(&tag, &ok)) {
+    if (!ok) ((WorkerData<MapTask>*)tag)->fail();
+    else ((WorkerData<MapTask>*)tag)->done();
+  }
+
   // set up reduce tasks
   _reduce_tasks.reserve(_mr_spec.n_output_files);
-  for (size_t i=0; i<_mr_spec.n_output_files; i++) _reduce_tasks.emplace_back(i, _map_tasks, _mr_spec.output_dir);
+  for (size_t i=0; i<_mr_spec.n_output_files; i++) _reduce_tasks.emplace_back(i, _map_tasks, inter_reducer_output);
 
   // begin reduce task (note: we cannot destruct any workers since old callbacks might still be in cq... so just use a new cq)
   _tasks_idx = 0;
   std::vector<WorkerData<ReduceTask>*> reduce_workers;
   reduce_workers.reserve(_mr_spec.worker_ipaddr_ports.size());
-  for (std::string ip : _mr_spec.worker_ipaddr_ports) reduce_workers.push_back(new WorkerData<ReduceTask>(_mr_spec, _reduce_tasks, _tasks_idx, ip, reduce_cq));
+  for (std::string ip : _mr_spec.worker_ipaddr_ports) reduce_workers.push_back(new WorkerData<ReduceTask>(_mr_spec, _reduce_tasks, _tasks_idx, ip, reduce_cq, inter_reducer_output));
 
   // process workers until reduce task done
   while (!std::all_of(_reduce_tasks.begin(), _reduce_tasks.end(), [](auto &s){ return s.done; })) {
@@ -247,6 +271,22 @@ bool Master::run() {
     }
     if (!ok) ((WorkerData<ReduceTask>*)tag)->fail();
     else ((WorkerData<ReduceTask>*)tag)->done();
+  }
+
+  // cancel all workers to delete 
+  for (auto w : reduce_workers) w->cancel();
+
+  // drain the queue just in case
+  reduce_cq.Shutdown();
+  while (reduce_cq.Next(&tag, &ok)) {
+    if (!ok) ((WorkerData<ReduceTask>*)tag)->fail();
+    else ((WorkerData<ReduceTask>*)tag)->done();
+  }
+
+  // copy correct outputs to real output dir
+  std::filesystem::create_directory(_mr_spec.output_dir.c_str());
+  for (auto &t : _reduce_tasks) {
+    std::filesystem::copy((inter_reducer_output + "/" + t.fn).c_str(), (_mr_spec.output_dir + "/" + t.fn).c_str());
   }
 
 	return true;
