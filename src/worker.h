@@ -162,8 +162,9 @@ class Worker::CallData {
 			reducer->reduce(p->first,p->second);
 		}
 
-		// std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
+		//std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
 		std::string outputFilePath = request_.output_dir() + "/" + request_.output_filename();
+		// std::string outputFilePath = request_.output_dir() + "/" + outputFileName;
 
 		std::cout<<outputFilePath<<std::endl;
 
@@ -261,8 +262,7 @@ void Worker::HandleRpcs(){
       // The return value of Next should always be checked. This return value
       // tells us whether there is any kind of event or cq_ is shutting down.
       GPR_ASSERT(cq_->Next(&tag, &ok));
-      GPR_ASSERT(ok);
-      static_cast<CallData*>(tag)->Proceed();
+      if (ok)static_cast<CallData*>(tag)->Proceed();
     }
 }
 
