@@ -76,7 +76,6 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                     }
                     else{
                          // Remove this, will not reach.
-                         std::cout<<"Here!"<<std::endl;
                          ; 
                          
                     }

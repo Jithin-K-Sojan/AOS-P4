@@ -99,8 +99,6 @@ class Worker::CallData {
 
 				if (getline(inputFileStream, inputString)){
 
-					if (inputString.rfind("ropaganda",0)==0)std::cout<<"HERE1!\n"<<std::endl;
-
 					mapper->map(inputString);
 
 					if (inputFileStream.tellg()==-1){
