@@ -250,11 +250,6 @@ bool Master::run() {
   // cancel all workers for reduce (all but one will be busy on the last one)
   for (auto w : map_workers) w->cancel();
 
-  // test
-  {
-    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
-  }
-
   // drain the queue just in case
   map_cq.Shutdown();
   while (map_cq.Next(&tag, &ok)) {
@@ -271,6 +266,11 @@ bool Master::run() {
   std::vector<WorkerData<ReduceTask>*> reduce_workers;
   reduce_workers.reserve(_mr_spec.worker_ipaddr_ports.size());
   for (std::string ip : _mr_spec.worker_ipaddr_ports) reduce_workers.push_back(new WorkerData<ReduceTask>(_mr_spec, _reduce_tasks, _tasks_idx, ip, reduce_cq, inter_reducer_output));
+
+  // test
+  {
+    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
+  }
 
   // process workers until reduce task done
   while (!std::all_of(_reduce_tasks.begin(), _reduce_tasks.end(), [](auto &s){ return s.done; })) {
