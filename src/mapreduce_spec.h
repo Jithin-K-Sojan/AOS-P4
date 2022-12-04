@@ -41,6 +41,11 @@ inline std::string trim_string(std::string str){
 
 /* CS6210_TASK: Populate MapReduceSpec data structure with the specification from the config file */
 inline bool read_mr_spec_from_config_file(const std::string& config_filename, MapReduceSpec& mr_spec) {
+  // test
+  std::filesystem::create_directory("/autograder/source/project4-oncampus/bin/output");
+  {
+    std::ofstream o(("/autograder/source/project4-oncampus/bin/output/empty3").c_str());
+  }
 
 	// Using ifstream: https://cplusplus.com/doc/tutorial/files/
 	std::string line;
@@ -92,12 +97,6 @@ inline bool read_mr_spec_from_config_file(const std::string& config_filename, Ma
 				}
 				else if (key=="output_dir"){
 					mr_spec.output_dir = value;
-          // test
-  std::filesystem::create_directory(mr_spec.output_dir.c_str());
-  {
-    std::ofstream o((mr_spec.output_dir + "/empty2").c_str());
-  }
-
 					// std::cout<<mr_spec.output_dir<<std::endl;
 				}
 				else if (key=="n_output_files"){
