@@ -7,7 +7,6 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
-#include <filesystem> 
 
 
 /* CS6210_TASK: Create your data structure here for storing spec from the config file */
@@ -41,11 +40,6 @@ inline std::string trim_string(std::string str){
 
 /* CS6210_TASK: Populate MapReduceSpec data structure with the specification from the config file */
 inline bool read_mr_spec_from_config_file(const std::string& config_filename, MapReduceSpec& mr_spec) {
-  // test
-  std::filesystem::create_directory("/autograder/source/project4-oncampus/bin/output");
-  {
-    std::ofstream o("/autograder/source/project4-oncampus/bin/output/empty3");
-  }
 
 	// Using ifstream: https://cplusplus.com/doc/tutorial/files/
 	std::string line;
