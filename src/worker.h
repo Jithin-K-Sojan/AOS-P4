@@ -162,7 +162,7 @@ class Worker::CallData {
 			reducer->reduce(p->first,p->second);
 		}
 
-		//std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
+		// std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
 		std::string outputFilePath = request_.output_dir() + "/" + request_.output_filename();
 		// std::string outputFilePath = request_.output_dir() + "/" + outputFileName;
 
@@ -263,6 +263,7 @@ void Worker::HandleRpcs(){
       // tells us whether there is any kind of event or cq_ is shutting down.
       GPR_ASSERT(cq_->Next(&tag, &ok));
       if (ok)static_cast<CallData*>(tag)->Proceed();
+	  else new CallData(&service_, cq_.get());
     }
 }
 
