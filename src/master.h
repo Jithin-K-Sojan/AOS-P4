@@ -267,6 +267,8 @@ bool Master::run() {
   reduce_workers.reserve(_mr_spec.worker_ipaddr_ports.size());
   for (std::string ip : _mr_spec.worker_ipaddr_ports) reduce_workers.push_back(new WorkerData<ReduceTask>(_mr_spec, _reduce_tasks, _tasks_idx, ip, reduce_cq, inter_reducer_output));
 
+  // A
+
   // process workers until reduce task done
   while (!std::all_of(_reduce_tasks.begin(), _reduce_tasks.end(), [](auto &s){ return s.done; })) {
     if (!(reduce_cq.Next(&tag, &ok))) {
@@ -278,13 +280,15 @@ bool Master::run() {
     else ((WorkerData<ReduceTask>*)tag)->done();
   }
 
-  // cancel all workers to delete 
-  for (auto w : reduce_workers) w->cancel();
-
   // test
   {
     std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
   }
+
+  // cancel all workers to delete 
+  for (auto w : reduce_workers) w->cancel();
+
+  // B
 
   // drain the queue just in case
   reduce_cq.Shutdown();
