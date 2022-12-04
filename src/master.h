@@ -218,6 +218,12 @@ bool Master::run() {
   assert(!run_ran);
   run_ran = true;
 
+  // add copy empty file just in case
+  std::filesystem::create_directory(_mr_spec.output_dir.c_str());
+  {
+    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
+  }
+
   // single cq because master has single thread, we want to wait for it outside WorkerData
   CompletionQueue map_cq, reduce_cq;
 
@@ -286,13 +292,8 @@ bool Master::run() {
   }
 
   // copy correct outputs to real output dir
-  std::filesystem::create_directory(_mr_spec.output_dir.c_str());
   for (auto &t : _reduce_tasks) {
     std::filesystem::copy((inter_reducer_output + "/" + t.fn).c_str(), (_mr_spec.output_dir + "/" + t.fn).c_str());
-  }
-  // copy empty file just in case
-  {
-    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
   }
 
 	return true;
