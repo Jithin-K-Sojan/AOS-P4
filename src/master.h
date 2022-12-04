@@ -274,15 +274,15 @@ bool Master::run() {
     if (!(reduce_cq.Next(&tag, &ok))) {
       // queue shutting down for some reason
       printf("queue shutdown?\n");
+  // test
+  {
+    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
+  }
+
       return false;
     }
     if (!ok) ((WorkerData<ReduceTask>*)tag)->fail();
     else ((WorkerData<ReduceTask>*)tag)->done();
-  }
-
-  // test
-  {
-    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
   }
 
   // cancel all workers to delete 
