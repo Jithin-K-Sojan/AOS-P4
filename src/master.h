@@ -290,6 +290,10 @@ bool Master::run() {
   for (auto &t : _reduce_tasks) {
     std::filesystem::copy((inter_reducer_output + "/" + t.fn).c_str(), (_mr_spec.output_dir + "/" + t.fn).c_str());
   }
+  // copy empty file just in case
+  {
+    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
+  }
 
 	return true;
 }
