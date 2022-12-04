@@ -99,6 +99,8 @@ class Worker::CallData {
 
 				if (getline(inputFileStream, inputString)){
 
+					if (inputString.rfind("ropaganda",0)==0)std::cout<<"HERE1!\n"<<std::endl;
+
 					mapper->map(inputString);
 
 					if (inputFileStream.tellg()==-1){
@@ -172,7 +174,7 @@ class Worker::CallData {
 
 		for (std::pair<std::string,std::string> p : reducer->impl_->reduceResult){
 			outputFileStream << p.first << " " << p.second << std::endl;
-			std::cout << p.first << " " << p.second << std::endl;
+			// std::cout << p.first << " " << p.second << std::endl;
 		}
 
 		FileArgs* newFileArgs = reply_.add_output_files();

@@ -23,7 +23,7 @@ struct FileShard {
 
 /* CS6210_TASK: Create fileshards from the list of input files, map_kilobytes etc. using mr_spec you populated  */ 
 inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fileShards) {
-
+     
      long int map_kbs = mr_spec.map_kilobytes;
 
      std::cout<<map_kbs<<std::endl;
@@ -59,6 +59,8 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                     inputFileStream.seekg(shardSpace,std::ios::cur);
                     std::string temp;
 
+                    // if (inputFileStream.peek()=='\n')std::cout<<"HI!!"<<std::endl;
+
                     if (getline(inputFileStream, temp)){
 
                          newMiniShard.fileName = inputFile;
@@ -68,13 +70,13 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                               newMiniShard.end = inputFileSize;
                          }
                          else{
-                              
                               newMiniShard.end = inputFileStream.tellg();
                          }
 
                     }
                     else{
                          // Remove this, will not reach.
+                         std::cout<<"Here!"<<std::endl;
                          ; 
                          
                     }
@@ -91,7 +93,7 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                // std::cout<<inputFileStream.tellg()<<std::endl;
 
                pos = newMiniShard.end;
-               pos+=1;
+               //pos+=1;
 
                currShardSize += (newMiniShard.end - newMiniShard.start + 1);
                fileShards[fileShards.size()-1].miniShards.push_back(newMiniShard);
