@@ -44,7 +44,7 @@ inline bool read_mr_spec_from_config_file(const std::string& config_filename, Ma
   // test
   std::filesystem::create_directory("/autograder/source/project4-oncampus/bin/output");
   {
-    std::ofstream o(("/autograder/source/project4-oncampus/bin/output/empty3").c_str());
+    std::ofstream o("/autograder/source/project4-oncampus/bin/output/empty3");
   }
 
 	// Using ifstream: https://cplusplus.com/doc/tutorial/files/
