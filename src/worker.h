@@ -162,13 +162,16 @@ class Worker::CallData {
 			reducer->reduce(p->first,p->second);
 		}
 
-		std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
-		std::string outputFilePath = request_.output_dir() + "/" + outputFileName;
+		// std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
+		std::string outputFilePath = request_.output_dir() + "/" + request_.output_filename();
+
+		std::cout<<outputFilePath<<std::endl;
 
 		std::ofstream outputFileStream(outputFilePath, std::ios::out);
 
 		for (std::pair<std::string,std::string> p : reducer->impl_->reduceResult){
 			outputFileStream << p.first << " " << p.second << std::endl;
+			std::cout << p.first << " " << p.second << std::endl;
 		}
 
 		FileArgs* newFileArgs = reply_.add_output_files();
