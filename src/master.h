@@ -232,11 +232,6 @@ bool Master::run() {
   void* tag;
   bool ok;
 
-  // test
-  {
-    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
-  }
-
   // process workers until map task done
   while (!std::all_of(_map_tasks.begin(), _map_tasks.end(), [](auto &s){ return s.done; })) {
     if (!(map_cq.Next(&tag, &ok))) {
@@ -254,6 +249,11 @@ bool Master::run() {
 
   // cancel all workers for reduce (all but one will be busy on the last one)
   for (auto w : map_workers) w->cancel();
+
+  // test
+  {
+    std::ofstream o((_mr_spec.output_dir + "/empty").c_str());
+  }
 
   // drain the queue just in case
   map_cq.Shutdown();
