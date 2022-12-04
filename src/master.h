@@ -186,6 +186,7 @@ class Master {
           reply = NULL;
           delete ctx;
           ctx = NULL;
+          // note: unreliable, worker may be yet to open file
           std::filesystem::remove(_output_dir + "/" + _fn);
           begin();
         }
@@ -196,6 +197,7 @@ class Master {
           printf("%s %s %s\n", _fn.c_str(), __func__, typeid(Task).name());
           if (ctx) {
             ctx->TryCancel();
+            // note: unreliable, worker may be yet to open file
             std::filesystem::remove(_output_dir + "/" + _fn);
           }
           // small memory leak here, but this is ok
