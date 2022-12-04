@@ -91,7 +91,7 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                // std::cout<<inputFileStream.tellg()<<std::endl;
 
                pos = newMiniShard.end;
-               pos+=1;
+               // pos+=1;
 
                currShardSize += (newMiniShard.end - newMiniShard.start + 1);
                fileShards[fileShards.size()-1].miniShards.push_back(newMiniShard);
