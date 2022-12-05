@@ -5,6 +5,8 @@ project(project4)
 
 include(GenerateProtos.cmake)
 
+set (CMAKE_CXX_FLAGS "-lstdc++fs -std=c++17")
+
 add_library(
   mapreducelib #library name
   mapreduce.cc mapreduce_impl.cc #sources

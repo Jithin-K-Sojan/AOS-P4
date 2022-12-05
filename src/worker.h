@@ -162,13 +162,17 @@ class Worker::CallData {
 			reducer->reduce(p->first,p->second);
 		}
 
-		std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
-		std::string outputFilePath = request_.output_dir() + "/" + outputFileName;
+		// std::string outputFileName = request_.job_id() + "_" + std::to_string(getpid());
+		std::string outputFilePath = request_.output_dir() + "/" + request_.output_filename();
+		// std::string outputFilePath = request_.output_dir() + "/" + outputFileName;
+
+		std::cout<<outputFilePath<<std::endl;
 
 		std::ofstream outputFileStream(outputFilePath, std::ios::out);
 
-		for (std::pair<std::string,std::string> p : reducer->impl_i->reduceResult[i]){
+		for (std::pair<std::string,std::string> p : reducer->impl_->reduceResult){
 			outputFileStream << p.first << " " << p.second << std::endl;
+			std::cout << p.first << " " << p.second << std::endl;
 		}
 
 		FileArgs* newFileArgs = reply_.add_output_files();
@@ -258,8 +262,8 @@ void Worker::HandleRpcs(){
       // The return value of Next should always be checked. This return value
       // tells us whether there is any kind of event or cq_ is shutting down.
       GPR_ASSERT(cq_->Next(&tag, &ok));
-      GPR_ASSERT(ok);
-      static_cast<CallData*>(tag)->Proceed();
+      if (ok)static_cast<CallData*>(tag)->Proceed();
+	  else new CallData(&service_, cq_.get());
     }
 }
 

@@ -17,7 +17,7 @@ struct MiniShard{
 /* CS6210_TASK: Create your own data structure here, where you can hold information about file splits,
      that your master would use for its own bookkeeping and to convey the tasks to the workers for mapping */
 struct FileShard {
-     std::vector<MiniShard> miniShards; 
+     std::vector<MiniShard> miniShards;
 };
 
 
@@ -91,7 +91,7 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
                // std::cout<<inputFileStream.tellg()<<std::endl;
 
                pos = newMiniShard.end;
-               pos+=1;
+               // pos+=1;
 
                currShardSize += (newMiniShard.end - newMiniShard.start + 1);
                fileShards[fileShards.size()-1].miniShards.push_back(newMiniShard);
