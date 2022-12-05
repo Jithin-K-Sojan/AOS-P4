@@ -11,7 +11,6 @@
 
 /* CS6210_TASK: Create your data structure here for storing spec from the config file */
 struct MapReduceSpec {
-	// Don't know if we need any more fields, just took whatever is present in config.ini for now.
 	int n_workers;
 	std::vector<std::string> worker_ipaddr_ports;
 	std::vector<std::string> input_files;
@@ -67,7 +66,6 @@ inline bool read_mr_spec_from_config_file(const std::string& config_filename, Ma
 
 				if (key=="n_workers"){
 					mr_spec.n_workers = stoi(value);
-					// std::cout<<mr_spec.n_workers<<std::endl;
 				}
 				else if (key=="worker_ipaddr_ports"){
 					std::stringstream addressStream(value);
@@ -76,8 +74,6 @@ inline bool read_mr_spec_from_config_file(const std::string& config_filename, Ma
 					while (getline(addressStream, address, ',')){
 						mr_spec.worker_ipaddr_ports.push_back(address);
 					}
-
-					// std::cout<<mr_spec.worker_ipaddr_ports[0]<<std::endl;
 				}
 				else if (key=="input_files"){
 					std::stringstream inputFileStream(value);
@@ -86,24 +82,18 @@ inline bool read_mr_spec_from_config_file(const std::string& config_filename, Ma
 					while (getline(inputFileStream, inputFile, ',')){
 						mr_spec.input_files.push_back(inputFile);
 					}
-
-					// std::cout<<mr_spec.input_files[0]<<std::endl;
 				}
 				else if (key=="output_dir"){
 					mr_spec.output_dir = value;
-					// std::cout<<mr_spec.output_dir<<std::endl;
 				}
 				else if (key=="n_output_files"){
 					mr_spec.n_output_files = stoi(value);
-					// std::cout<<mr_spec.n_output_files<<std::endl;
 				}
 				else if (key=="map_kilobytes"){
 					mr_spec.map_kilobytes = stol(value);
-					// std::cout<<mr_spec.map_kilobytes<<std::endl;
 				}
 				else if (key=="user_id"){
 					mr_spec.user_id = value;
-					// std::cout<<mr_spec.user_id<<std::endl;
 				}
 				else{
 					std::cout<<"Undefined key "<<key<<" set in config file "<<config_filename<<" \n";
@@ -124,8 +114,6 @@ inline bool read_mr_spec_from_config_file(const std::string& config_filename, Ma
 /* CS6210_TASK: validate the specification read from the config file */
 inline bool validate_mr_spec(const MapReduceSpec& mr_spec) {
 
-	// The output directory would be created later I believe.
-
 	if (mr_spec.n_workers > mr_spec.worker_ipaddr_ports.size()){
 		std::cout<<"Number of specified worker addresses less than n_workers in the configuration!\n";
 		return false;
@@ -140,8 +128,6 @@ inline bool validate_mr_spec(const MapReduceSpec& mr_spec) {
 		}
 		inputFile.close();
 	}
-
-	std::cout<<"Looks good!\n";
 
 	return true;
 }

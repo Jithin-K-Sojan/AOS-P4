@@ -27,7 +27,6 @@ message JobReply {
     // Indicating the success of the map/reduce task.
     bool job_status = 1;
     // Indicating the path of the output/intermediate files.
-    // Note that the intermediate file names/paths will be a combination of the pid of the worker instance, the unique id for the task provdided by the master, and the partition number (0 to (R-1)).
     repeated FileArgs output_files = 2;
 
 }

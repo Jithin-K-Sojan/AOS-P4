@@ -26,8 +26,6 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
 
      long int map_kbs = mr_spec.map_kilobytes;
 
-     std::cout<<map_kbs<<std::endl;
-
      long int currShardSize = 0;
 
      for (auto inputFile: mr_spec.input_files){
@@ -36,8 +34,6 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
           
           inputFileStream.seekg(0,std::ios::end);
           long int inputFileSize = inputFileStream.tellg();
-
-          std::cout<<inputFile<<" size: "<<inputFileSize<<std::endl;
 
           inputFileStream.seekg(0);
 
@@ -74,24 +70,17 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
 
                     }
                     else{
-                         // Remove this, will not reach.
                          ; 
-                         
                     }
                }
                else{
-                    // The file does not end on a "\n"
                     inputFileStream.seekg(0,std::ios::end);
                     newMiniShard.fileName = inputFile;
                     newMiniShard.start = pos;
                     newMiniShard.end = inputFileSize;
                }
 
-
-               // std::cout<<inputFileStream.tellg()<<std::endl;
-
                pos = newMiniShard.end;
-               // pos+=1;
 
                currShardSize += (newMiniShard.end - newMiniShard.start + 1);
                fileShards[fileShards.size()-1].miniShards.push_back(newMiniShard);
@@ -106,12 +95,14 @@ inline bool shard_files(const MapReduceSpec& mr_spec, std::vector<FileShard>& fi
 
      }
 
-     for (auto i: fileShards){
-          std::cout<<"New Shard\n";
-          for (auto j: i.miniShards){
-               std::cout<<j.fileName<<" "<<j.start<<" "<<j.end<<std::endl;
-          }
-     }
+     // Confirming correctness of the minishards.
+
+     // for (auto i: fileShards){
+     //      std::cout<<"New Shard\n";
+     //      for (auto j: i.miniShards){
+     //           std::cout<<j.fileName<<" "<<j.start<<" "<<j.end<<std::endl;
+     //      }
+     // }
 
      // long int end = fileShards[1].miniShards[0].end;
      // std::cout<<end<<std::endl;
