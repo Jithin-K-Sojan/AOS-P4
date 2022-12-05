@@ -127,7 +127,6 @@ class Master {
               _tasks_idx = (_tasks_idx+1)%_tasks.size();
               if (_tasks_idx == initial_idx) {
                 // everything is done, nothing else to do (this drops out of the cq loop)
-{ std::ofstream o("/autograder/source/project4-oncampus/bin/output/empty"); }
                 return;
               }
             }
@@ -153,7 +152,7 @@ class Master {
 
           // set deadline and make context
           ctx = new grpc::ClientContext();
-          ctx->set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
+          ctx->set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(100000));
 
           std::unique_ptr<ClientAsyncResponseReader<masterworker::JobReply>> rpc(
             stub->AsyncrunJob(ctx, req, &_cq));
