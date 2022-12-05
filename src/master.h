@@ -152,7 +152,7 @@ class Master {
 
           // set deadline and make context
           ctx = new grpc::ClientContext();
-          ctx->set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
+          ctx->set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(100000));
 
           std::unique_ptr<ClientAsyncResponseReader<masterworker::JobReply>> rpc(
             stub->AsyncrunJob(ctx, req, &_cq));
