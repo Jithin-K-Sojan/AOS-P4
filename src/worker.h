@@ -78,7 +78,7 @@ class Worker::CallData {
 		Proceed();
 	}
 
-	void runMapTask() {
+	bool runMapTask() {
 		auto mapper = get_mapper_from_task_factory(request_.user_id());
 		
 		int num_partitions = request_.num_partitions();
@@ -88,6 +88,8 @@ class Worker::CallData {
 		for (FileArgs fileArg_: request_.input_files()) {
 			std::ifstream inputFileStream(fileArg_.file_path(), std::ios::in);
 			std::string inputString;
+
+			if (!inputFileStream.is_open())return false;
 
 			inputFileStream.seekg(fileArg_.start_offset());
 
@@ -120,6 +122,8 @@ class Worker::CallData {
 
 			std::ofstream outputFileStream(interFilePath, std::ios::out);
 
+			if (!outputFileStream.is_open())return false;
+
 			for (std::pair<std::string,std::string> p : mapper->impl_->mapResult[i]){
 				// Putting the key and value in consequent lines incase the strings could have spaces themselves.
 				outputFileStream << p.first << std::endl;
@@ -134,15 +138,20 @@ class Worker::CallData {
 			outputFileStream.close();
 		}
 
+		return true;
+
 	}
 
-	void runReduceTask() {
+	bool runReduceTask() {
 		auto reducer = get_reducer_from_task_factory(request_.user_id());
 
 		std::map<std::string,std::vector<std::string>> mapResult;
 
 		for (FileArgs fileArg_ : request_.input_files()) {
 			std::ifstream inputFileStream(fileArg_.file_path(), std::ios::in);
+
+			if (!inputFileStream.is_open())return false;
+
 			std::string keyString;
 			std::string valString;
 
@@ -161,6 +170,8 @@ class Worker::CallData {
 
 		std::ofstream outputFileStream(outputFilePath, std::ios::out);
 
+		if (!outputFileStream.is_open())return false;
+
 		for (std::pair<std::string,std::string> p : reducer->impl_->reduceResult){
 			outputFileStream << p.first << " " << p.second << std::endl;
 		}
@@ -171,6 +182,9 @@ class Worker::CallData {
 		newFileArgs->set_end_offset(outputFileStream.tellp());
 
 		outputFileStream.close();
+
+
+		return true;
 
 	}
 
@@ -185,14 +199,15 @@ class Worker::CallData {
 
 			new CallData(service_, cq_);
 
+			bool result;
 			if (request_.map_reduce()){
-				runReduceTask();
+				result = runReduceTask();
 			}
 			else{
-				runMapTask();
+				result = runMapTask();
 			}
 
-			reply_.set_job_status(true);
+			reply_.set_job_status(result);
 
 			status_ = FINISH;
 			responder_.Finish(reply_, Status::OK, this);
